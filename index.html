@@ -447,20 +447,21 @@ body{background:var(--off-white);font-family:var(--font);min-height:100vh}
 <script>
 const SB_URL='https://ukmkhilajucolujqygdx.supabase.co';
 const SB_KEY='sb_publishable_vA5HGJn-k2jF5SNV7BziQg_fbOUy0J1';
-const TABLE='trackerdata';
+const TABLE_QUOTES='quotes';
+const TABLE_CLIENTS='clients';
 
-async function sbGet(k){
-  const r=await fetch(`${SB_URL}/rest/v1/${TABLE}?clave=eq.${encodeURIComponent(k)}&select=valor`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+async function sbGet(k,table){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?clave=eq.${encodeURIComponent(k)}&select=valor`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
   const rows=await r.json();return rows&&rows.length?JSON.parse(rows[0].valor):null;
 }
-async function sbSet(k,v){
+async function sbSet(k,v,table){
   const body=JSON.stringify({clave:k,valor:JSON.stringify(v)});
-  const r=await fetch(`${SB_URL}/rest/v1/${TABLE}?clave=eq.${encodeURIComponent(k)}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?clave=eq.${encodeURIComponent(k)}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
   const rows=await r.json();
   if(rows&&rows.length){
-    await fetch(`${SB_URL}/rest/v1/${TABLE}?clave=eq.${encodeURIComponent(k)}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},body});
+    await fetch(`${SB_URL}/rest/v1/${table}?clave=eq.${encodeURIComponent(k)}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},body});
   } else {
-    await fetch(`${SB_URL}/rest/v1/${TABLE}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body});
+    await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body});
   }
 }
 
@@ -633,8 +634,8 @@ async function saveQuote(){
   quotes.unshift(q);if(quotes.length>100)quotes=quotes.slice(0,100);
 
   try{
-    await sbSet('quotes_eric',quotes);
-    await sbSet('clients_eric',clients);
+    await sbSet('quotes_eric',quotes,TABLE_QUOTES);
+    await sbSet('clients_eric',clients,TABLE_CLIENTS);
     toast('Saved ✓');
   } catch(e){toast('Saved locally');}
   renderHistory();
@@ -750,14 +751,14 @@ async function saveClientEdit(){
   clients[id].email=document.getElementById('editClientEmail').value.trim();
   clients[id].phone=document.getElementById('editClientPhone').value.trim();
   clients[id].notes=document.getElementById('editClientNotes').value.trim();
-  try{await sbSet('clients_eric',clients);toast('Client updated ✓');}catch(e){toast('Updated locally');}
+  try{await sbSet('clients_eric',clients,TABLE_CLIENTS);toast('Client updated ✓');}catch(e){toast('Updated locally');}
   closeModal();renderClients();
 }
 async function deleteClient(id){
   if(!confirm('Delete this client and all their quotes?'))return;
   delete clients[id];
   quotes=quotes.filter(q=>q.clientId!==id);
-  try{await sbSet('clients_eric',clients);await sbSet('quotes_eric',quotes);toast('Client deleted');}catch(e){}
+  try{await sbSet('clients_eric',clients,TABLE_CLIENTS);await sbSet('quotes_eric',quotes,TABLE_QUOTES);toast('Client deleted');}catch(e){}
   renderClients();renderHistory();
 }
 
@@ -811,7 +812,7 @@ function downloadPDF(){
 async function init(){
   multiDates=[];
   try{
-    const [savedQ,savedC]=await Promise.all([sbGet('quotes_eric'),sbGet('clients_eric')]);
+    const [savedQ,savedC]=await Promise.all([sbGet('quotes_eric',TABLE_QUOTES),sbGet('clients_eric',TABLE_CLIENTS)]);
     if(savedQ&&Array.isArray(savedQ)) quotes=savedQ;
     if(savedC&&typeof savedC==='object') clients=savedC;
   } catch(e){}
