@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Quote Generator — Eric Segura</title>
+<style>
+:root{
+  --white:#FFFFFF;
+  --off-white:#F5F5F5;
+  --light-gray:#CCCCCC;
+  --mid-gray:#777777;
+  --dark-gray:#333333;
+  --black:#0A0A0A;
+  --font:'Helvetica Neue',Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--off-white);font-family:var(--font);min-height:100vh}
+.app{display:grid;grid-template-columns:400px 1fr;min-height:100vh}
+
+/* FORM PANEL */
+.form-panel{background:var(--white);overflow-y:auto;position:sticky;top:0;height:100vh;border-right:1px solid var(--light-gray);display:flex;flex-direction:column}
+.form-logo{padding:40px 40px 24px;border-bottom:1px solid var(--light-gray)}
+.form-logo .brand{font-size:10px;font-weight:400;letter-spacing:4px;color:var(--mid-gray);text-transform:uppercase;margin-bottom:8px}
+.form-logo .name{font-size:26px;font-weight:700;color:var(--black);letter-spacing:-0.5px;line-height:1.1}
+.form-logo .sub{font-size:11px;font-weight:400;color:var(--mid-gray);letter-spacing:3px;text-transform:uppercase;margin-top:6px}
+
+/* Panel tabs */
+.panel-tabs{display:flex;border-bottom:1px solid var(--light-gray)}
+.panel-tab{flex:1;padding:12px 8px;font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--mid-gray);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;font-family:var(--font)}
+.panel-tab.active{color:var(--black);border-bottom-color:var(--black)}
+.panel-tab:hover{color:var(--dark-gray)}
+
+.panel-view{display:none;flex:1;overflow-y:auto;padding:32px 40px 40px}
+.panel-view.active{display:block}
+
+.section-label{font-size:9px;font-weight:700;letter-spacing:4px;color:var(--mid-gray);text-transform:uppercase;margin-bottom:14px;margin-top:28px}
+.section-label:first-child{margin-top:0}
+
+.field{margin-bottom:14px;position:relative}
+.field label{display:block;font-size:9px;font-weight:700;letter-spacing:3px;color:var(--mid-gray);text-transform:uppercase;margin-bottom:7px}
+.field input,.field select,.field textarea{width:100%;background:var(--white);border:none;border-bottom:1px solid var(--light-gray);padding:9px 0;font-family:var(--font);font-size:14px;font-weight:300;color:var(--black);outline:none;transition:border-color .2s;border-radius:0}
+.field input:focus,.field select:focus,.field textarea:focus{border-bottom-color:var(--black)}
+.field select{appearance:none;cursor:pointer;background:transparent}
+.field textarea{resize:vertical;min-height:80px;line-height:1.6;border:none;border-bottom:1px solid var(--light-gray)}
+.field input::placeholder,.field textarea::placeholder{color:var(--light-gray);font-weight:300}
+
+/* Autocomplete */
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--light-gray);border-top:none;z-index:100;max-height:180px;overflow-y:auto}
+.autocomplete-item{padding:10px 12px;font-size:13px;font-weight:300;color:var(--black);cursor:pointer;border-bottom:1px solid var(--off-white);transition:background .15s}
+.autocomplete-item:hover{background:var(--off-white)}
+.autocomplete-item:last-child{border-bottom:none}
+.autocomplete-item strong{font-weight:700;color:var(--black)}
+.autocomplete-item span{font-size:11px;color:var(--mid-gray);display:block;margin-top:2px}
+
+.currency-row{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.time-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--off-white)}
+.toggle-label{font-size:13px;font-weight:400;color:var(--dark-gray)}
+.toggle-sub{font-size:10px;font-weight:400;color:var(--mid-gray);margin-top:2px}
+.switch{position:relative;width:40px;height:22px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:var(--light-gray);border-radius:22px;transition:.2s}
+.slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:var(--white);border-radius:50%;transition:.2s}
+.switch input:checked+.slider{background:var(--black)}
+.switch input:checked+.slider:before{transform:translateX(18px)}
+
+/* Multi day */
+.multiday-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.multiday-item{display:flex;align-items:center;gap:8px}
+.multiday-item input{flex:1;background:var(--white);border:none;border-bottom:1px solid var(--light-gray);padding:8px 0;font-family:var(--font);font-size:13px;font-weight:300;color:var(--black);outline:none}
+.multiday-item input:focus{border-bottom-color:var(--black)}
+.btn-remove-date{background:none;border:none;color:var(--mid-gray);cursor:pointer;font-size:16px;padding:4px;line-height:1;flex-shrink:0}
+.btn-remove-date:hover{color:var(--black)}
+.btn-add-date{background:none;border:1px solid var(--light-gray);color:var(--mid-gray);cursor:pointer;font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:9px 16px;font-family:var(--font);transition:all .2s;width:100%}
+.btn-add-date:hover{border-color:var(--black);color:var(--black)}
+
+.date-single{display:block}
+.date-hourly{display:none}
+.date-multi{display:none}
+
+.btn-generate{width:100%;padding:14px;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;background:var(--black);color:var(--white);border:none;cursor:pointer;margin-top:8px;transition:opacity .2s}
+.btn-generate:hover{opacity:.8}
+.btn-pdf{width:100%;padding:13px;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;background:transparent;color:var(--black);border:1px solid var(--dark-gray);cursor:pointer;margin-top:8px;transition:all .2s;display:none}
+.btn-pdf:hover{background:var(--dark-gray);color:var(--white)}
+.btn-pdf.visible{display:block}
+.btn-save{width:100%;padding:13px;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;background:transparent;color:var(--mid-gray);border:1px solid var(--light-gray);cursor:pointer;margin-top:8px;transition:all .2s;display:none}
+.btn-save:hover{background:var(--light-gray);color:var(--black)}
+.btn-save.visible{display:block}
+
+/* History in quote tab */
+.history-section{margin-top:32px;padding-top:24px;border-top:1px solid var(--light-gray)}
+.history-title{font-size:9px;font-weight:700;letter-spacing:4px;color:var(--mid-gray);text-transform:uppercase;margin-bottom:16px}
+.history-item{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--off-white);cursor:pointer;transition:opacity .2s}
+.history-item:hover{opacity:.6}
+.hi-name{font-size:13px;font-weight:300;color:var(--black)}
+.hi-meta{font-size:10px;color:var(--mid-gray);letter-spacing:.5px;margin-top:2px}
+.hi-right{text-align:right}
+.hi-date{font-size:10px;color:var(--mid-gray)}
+.history-empty{font-size:12px;font-weight:400;color:var(--light-gray)}
+
+/* Clients tab */
+.client-search{margin-bottom:20px}
+.client-card{background:var(--off-white);padding:16px;margin-bottom:10px;cursor:pointer;transition:background .15s;position:relative}
+.client-card:hover{background:var(--light-gray)}
+.client-card-name{font-size:15px;font-weight:700;color:var(--black);margin-bottom:6px}
+.client-card-meta{font-size:11px;color:var(--mid-gray);line-height:1.7}
+.client-card-stat{display:flex;gap:20px;margin-top:8px;padding-top:8px;border-top:1px solid var(--light-gray)}
+.client-stat{text-align:center}
+.client-stat-val{font-size:16px;font-weight:700;color:var(--black)}
+.client-stat-lbl{font-size:9px;font-weight:700;letter-spacing:2px;color:var(--mid-gray);text-transform:uppercase}
+.client-actions{display:flex;gap:8px;margin-top:10px}
+.btn-client-action{flex:1;padding:8px;font-family:var(--font);font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;cursor:pointer;border:1px solid var(--light-gray);background:var(--white);color:var(--dark-gray);transition:all .2s}
+.btn-client-action:hover{background:var(--black);color:var(--white);border-color:var(--black)}
+.btn-client-action.danger:hover{background:#C0392B;border-color:#C0392B;color:var(--white)}
+.client-quotes{margin-top:10px;border-top:1px solid var(--light-gray);padding-top:10px;display:none}
+.client-quotes.open{display:block}
+.client-quote-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--off-white);font-size:12px}
+.client-quote-item:last-child{border:none}
+.cqi-name{color:var(--dark-gray);font-weight:400}
+.cqi-amt{color:var(--black);font-weight:700}
+.clients-empty{font-size:12px;font-weight:400;color:var(--light-gray);padding:20px 0}
+
+/* Edit client modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);width:360px;padding:32px;position:relative}
+.modal-title{font-size:14px;font-weight:700;color:var(--black);letter-spacing:1px;text-transform:uppercase;margin-bottom:24px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--mid-gray);line-height:1}
+.modal-close:hover{color:var(--black)}
+.modal-actions{display:flex;gap:8px;margin-top:20px}
+.btn-modal-save{flex:1;padding:12px;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:var(--black);color:var(--white);border:none;cursor:pointer}
+.btn-modal-cancel{padding:12px 16px;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:transparent;color:var(--mid-gray);border:1px solid var(--light-gray);cursor:pointer}
+
+/* PREVIEW */
+.preview-panel{background:var(--off-white);display:flex;flex-direction:column;align-items:center;padding:48px 40px;overflow-y:auto}
+.preview-label{font-size:9px;font-weight:700;letter-spacing:4px;color:var(--mid-gray);text-transform:uppercase;margin-bottom:32px;align-self:flex-start}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:60px;width:100%}
+.empty-state .es-line{width:1px;height:80px;background:var(--light-gray);margin:0 auto 24px}
+.empty-state p{font-size:10px;font-weight:300;letter-spacing:3px;text-transform:uppercase;line-height:2.2;color:var(--mid-gray)}
+
+/* QUOTE DOC */
+.quote-doc{width:595px;background:var(--white);box-shadow:0 4px 40px rgba(0,0,0,.08)}
+.page{width:595px;position:relative;overflow:hidden}
+.page-cover{background:var(--white);min-height:842px;display:flex;flex-direction:column;justify-content:space-between;padding:64px 72px}
+.cover-line-v{position:absolute;left:72px;top:64px;width:1px;height:200px;background:var(--light-gray)}
+.cover-top{padding-top:220px}
+.cover-name{font-size:52px;font-weight:700;color:var(--black);letter-spacing:-2px;line-height:.95;text-transform:uppercase}
+.cover-tagline{font-size:11px;font-weight:300;color:var(--mid-gray);letter-spacing:5px;text-transform:uppercase;margin-top:20px}
+.cover-since{font-size:10px;font-weight:300;color:var(--light-gray);letter-spacing:3px;text-transform:uppercase;margin-top:6px}
+.cover-bottom-left{font-size:9px;font-weight:700;letter-spacing:4px;color:var(--light-gray);text-transform:uppercase}
+.cover-side{position:absolute;right:24px;top:50%;transform:translateY(-50%) rotate(90deg);transform-origin:center;font-size:8px;font-weight:300;letter-spacing:6px;color:var(--light-gray);text-transform:uppercase;white-space:nowrap}
+.page-content{background:var(--white);min-height:842px;padding:64px 72px;border-top:1px solid var(--light-gray)}
+.q-eyebrow{font-size:9px;font-weight:700;letter-spacing:4px;color:var(--mid-gray);text-transform:uppercase;margin-bottom:8px}
+.q-client{font-size:44px;font-weight:700;color:var(--black);letter-spacing:-1.5px;line-height:.95;text-transform:uppercase;margin-bottom:48px}
+.q-project{font-size:12px;font-weight:400;color:var(--mid-gray);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px}
+.q-divider{width:100%;height:1px;background:var(--light-gray);margin-bottom:40px}
+.q-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-bottom:40px}
+.q-block-label{font-size:9px;font-weight:700;letter-spacing:3px;color:var(--mid-gray);text-transform:uppercase;margin-bottom:10px}
+.q-block-value{font-size:18px;font-weight:700;color:var(--black);letter-spacing:-0.5px;line-height:1.3}
+.q-block-sub{font-size:11px;font-weight:400;color:var(--mid-gray);margin-top:4px;line-height:1.6;letter-spacing:.5px}
+.q-session-badge{display:inline-block;background:var(--black);color:var(--white);font-size:9px;font-weight:700;letter-spacing:4px;text-transform:uppercase;padding:7px 16px}
+.q-cost{font-size:40px;font-weight:700;color:var(--black);letter-spacing:-1px;line-height:1}
+.q-cost-currency{font-size:18px;font-weight:300;color:var(--mid-gray);margin-right:4px}
+.q-iva-table{margin-top:14px;border-top:1px solid var(--off-white)}
+.q-iva-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--off-white);font-size:12px}
+.q-iva-row:last-child{border:none;font-weight:700;font-size:13px}
+.q-iva-label{font-weight:400;color:var(--mid-gray)}
+.q-iva-value{font-weight:500;color:var(--dark-gray)}
+.q-iva-total-label{font-weight:700;color:var(--black)}
+.q-iva-total-value{font-weight:700;color:var(--black)}
+.q-objective-block{margin-bottom:40px}
+.q-objective-text{font-size:13px;font-weight:400;color:var(--dark-gray);line-height:1.7}
+.q-terms-section{border-top:1px solid var(--light-gray);padding-top:32px}
+.q-terms-label{font-size:9px;font-weight:700;letter-spacing:4px;color:var(--mid-gray);text-transform:uppercase;margin-bottom:20px}
+.q-terms-list{list-style:none}
+.q-terms-list li{font-size:10px;font-weight:400;color:var(--mid-gray);padding:6px 0 6px 16px;position:relative;line-height:1.6;border-bottom:1px solid var(--off-white)}
+.q-terms-list li:last-child{border:none}
+.q-terms-list li::before{content:'—';position:absolute;left:0;color:var(--light-gray)}
+.content-side{position:absolute;right:24px;top:50%;transform:translateY(-50%) rotate(90deg);transform-origin:center;font-size:8px;font-weight:300;letter-spacing:6px;color:var(--light-gray);text-transform:uppercase;white-space:nowrap}
+.q-dates-list{display:flex;flex-direction:column;gap:4px}
+.q-date-item{font-size:13px;font-weight:300;color:var(--black);padding:4px 0;border-bottom:1px solid var(--off-white)}
+.q-date-item:last-child{border:none}
+.page-closing{background:var(--white);min-height:680px;display:flex;flex-direction:column;justify-content:space-between;padding:64px 72px;border-top:1px solid var(--light-gray)}
+.closing-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+.closing-name{font-size:32px;font-weight:700;color:var(--black);letter-spacing:-1px;text-transform:uppercase}
+.closing-x{font-size:11px;font-weight:300;color:var(--light-gray);letter-spacing:4px;margin:-4px 0}
+.closing-brand{font-size:14px;font-weight:700;color:var(--dark-gray);letter-spacing:4px;text-transform:uppercase}
+.closing-contact{display:flex;justify-content:space-between;border-top:1px solid var(--light-gray);padding-top:24px}
+.closing-info{font-size:9px;font-weight:700;letter-spacing:3px;color:var(--dark-gray);text-transform:uppercase}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--black);color:var(--white);font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:12px 20px;opacity:0;transition:all .3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+
+@media print{
+  .form-panel,.preview-label,.modal-overlay{display:none!important}
+  .app{display:block}
+  .preview-panel{padding:0;background:white}
+  .quote-doc{box-shadow:none;width:100%}
+  .page{page-break-after:always}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- FORM PANEL -->
+  <div class="form-panel">
+    <div class="form-logo">
+      <div class="brand">Límbico Project</div>
+      <div class="name">Quote<br>Generator</div>
+    </div>
+
+    <div class="panel-tabs">
+      <button class="panel-tab active" onclick="switchPanel('quote',this)">Quote</button>
+      <button class="panel-tab" onclick="switchPanel('clients',this)">Clients</button>
+      <button class="panel-tab" onclick="switchPanel('history',this)">History</button>
+    </div>
+
+    <!-- QUOTE TAB -->
+    <div id="panel-quote" class="panel-view active">
+      <div class="section-label">Client</div>
+      <div class="field">
+        <label>Client name</label>
+        <input type="text" id="fClient" placeholder="Start typing..." autocomplete="off" oninput="onClientInput()" onblur="hideAutocomplete()"/>
+        <div class="autocomplete-list" id="autocompleteList" style="display:none"></div>
+      </div>
+      <div class="field">
+        <label>Project / occasion</label>
+        <input type="text" id="fProject" placeholder="e.g. Brand campaign, portrait..."/>
+      </div>
+
+      <div class="section-label">Session type</div>
+      <div class="field">
+        <label>Type</label>
+        <select id="fSession" onchange="onSessionChange()">
+          <option value="Hourly">Hourly</option>
+          <option value="Half Day" selected>Half Day</option>
+          <option value="Full Day">Full Day</option>
+          <option value="Multi Day">Multi Day</option>
+        </select>
+      </div>
+
+      <div id="dateHourly" class="date-hourly">
+        <div class="field"><label>Date</label><input type="date" id="fDateHourly"/></div>
+        <div class="time-row">
+          <div class="field"><label>Start time</label><input type="time" id="fTimeStart"/></div>
+          <div class="field"><label>End time</label><input type="time" id="fTimeEnd"/></div>
+        </div>
+      </div>
+      <div id="dateSingle" class="date-single">
+        <div class="field"><label>Proposed date</label><input type="date" id="fDate"/></div>
+      </div>
+      <div id="dateMulti" class="date-multi">
+        <div class="field">
+          <label>Session dates</label>
+          <div class="multiday-list" id="multiDayList"></div>
+          <button class="btn-add-date" onclick="addDate()">+ Add date</button>
+        </div>
+      </div>
+
+      <div class="section-label">Investment</div>
+      <div class="currency-row">
+        <div class="field"><label>Amount</label><input type="number" id="fAmount" placeholder="0"/></div>
+        <div class="field">
+          <label>Currency</label>
+          <select id="fCurrency"><option value="₡">₡ CRC</option><option value="$">$ USD</option></select>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Include invoice (IVA 13%)</div><div class="toggle-sub">Shows tax breakdown</div></div>
+        <label class="switch"><input type="checkbox" id="fIva" onchange="onIvaChange()"/><span class="slider"></span></label>
+      </div>
+
+      <div class="section-label">Objective</div>
+      <div class="field"><textarea id="fObjective" placeholder="Session objective and specific details..."></textarea></div>
+
+      <button class="btn-generate" onclick="generateQuote()">Generate quote</button>
+      <button class="btn-pdf" id="btnPdf" onclick="downloadPDF()">Download PDF</button>
+      <button class="btn-save" id="btnSave" onclick="saveQuote()">Save quote</button>
+    </div>
+
+    <!-- CLIENTS TAB -->
+    <div id="panel-clients" class="panel-view">
+      <div class="section-label" style="margin-top:0">All clients</div>
+      <div class="field client-search">
+        <label>Search</label>
+        <input type="text" id="clientSearch" placeholder="Filter by name..." oninput="renderClients()"/>
+      </div>
+      <div id="clientsList"></div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="panel-history" class="panel-view">
+      <div class="section-label" style="margin-top:0">Recent quotes</div>
+      <div id="historyList"><div class="history-empty">No quotes yet</div></div>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-panel">
+    <div class="preview-label">Preview</div>
+    <div id="emptyState" class="empty-state">
+      <div class="es-line"></div>
+      <p>Fill the form<br>and generate<br>your quote</p>
+    </div>
+    <div id="quoteDoc" class="quote-doc" style="display:none">
+      <div class="page page-cover">
+        <div class="cover-line-v"></div>
+        <div class="cover-top">
+          <div class="cover-name">LÍMBICO<br>PROJECT</div>
+          <div class="cover-tagline">SEE. FEEL. LIVE.</div>
+          <div class="cover-since">SINCE 2020.</div>
+        </div>
+        <div><div class="cover-bottom-left">PART OF LÍMBICO PROJECT</div></div>
+        <div class="cover-side">ERIC SEGURA — LÍMBICO PROJECT</div>
+      </div>
+      <div class="page page-content">
+        <div id="qProjectLine" class="q-project" style="display:none"></div>
+        <div class="q-eyebrow">Project</div>
+        <div class="q-client" id="qClient">CLIENT NAME</div>
+        <div class="q-divider"></div>
+        <div class="q-grid">
+          <div>
+            <div class="q-block-label">Session</div>
+            <div><span class="q-session-badge" id="qSession">HALF DAY</span></div>
+            <div class="q-block-sub" id="qSessionSub" style="margin-top:10px">No hourly limitations.<br>Full availability as agreed.</div>
+          </div>
+          <div>
+            <div class="q-block-label" id="qDateLabel">Date</div>
+            <div id="qDateArea"></div>
+          </div>
+        </div>
+        <div style="margin-bottom:40px">
+          <div class="q-block-label">Investment</div>
+          <div class="q-cost"><span class="q-cost-currency" id="qCurrency">₡</span><span id="qAmount">0</span></div>
+          <div id="qIvaTable" style="display:none" class="q-iva-table">
+            <div class="q-iva-row"><span class="q-iva-label">Base amount</span><span class="q-iva-value" id="qIvaBase">₡0</span></div>
+            <div class="q-iva-row"><span class="q-iva-label">IVA (13%)</span><span class="q-iva-value" id="qIvaAmt">₡0</span></div>
+            <div class="q-iva-row"><span class="q-iva-total-label">Total</span><span class="q-iva-total-value" id="qIvaTotal">₡0</span></div>
+          </div>
+          <div class="q-block-sub" style="margin-top:8px">50% deposit to confirm · 50% upon delivery</div>
+        </div>
+        <div class="q-objective-block" id="qObjectiveBlock" style="display:none">
+          <div class="q-block-label">Objective</div>
+          <div class="q-objective-text" id="qObjective"></div>
+        </div>
+        <div class="q-terms-section">
+          <div class="q-terms-label">Terms & Conditions</div>
+          <ul class="q-terms-list">
+            <li>A 50% deposit is required to confirm the session date. The remaining 50% is due upon delivery.</li>
+            <li>No hourly limitations apply — the session covers a half day or full day as agreed.</li>
+            <li>Cancellations with less than 48 hours notice will result in a non-refundable deposit.</li>
+            <li>3 rounds of edits are included. Additional rounds will be previously negotiated.</li>
+            <li>Any additional costs beyond the agreed session will be previously negotiated.</li>
+            <li>Eric Segura / Límbico Project reserves the right to use session images for portfolio and social media unless otherwise agreed.</li>
+          </ul>
+        </div>
+        <div class="content-side">LÍMBICO PROJECT</div>
+      </div>
+      <div class="page page-closing">
+        <div></div>
+        <div class="closing-center">
+          <div class="closing-name">LÍMBICO PROJECT</div>
+          <div class="closing-x">×</div>
+          <div class="closing-brand">ERIC SEGURA</div>
+        </div>
+        <div class="closing-contact">
+          <div class="closing-info">TEAM@LÍMBICO.MEDIA</div>
+          <div class="closing-info">(+506) 86617198</div>
+        </div>
+      </div>
+
+      <!-- PAGE 4 — PAYMENT INFO -->
+      <div class="page page-closing" style="min-height:500px">
+        <div></div>
+        <div style="flex:1;padding-top:40px">
+          <div class="q-terms-label" style="margin-bottom:28px">Payment information</div>
+
+          <div style="margin-bottom:32px">
+            <div class="q-block-label" style="margin-bottom:12px">Colones (CRC)</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="q-iva-row" style="border-bottom:1px solid var(--off-white);padding:8px 0">
+                <span class="q-iva-label">Client</span>
+                <span class="q-iva-value">ERIC SEGURA LEDEZMA</span>
+              </div>
+              <div class="q-iva-row" style="border-bottom:1px solid var(--off-white);padding:8px 0">
+                <span class="q-iva-label">BAC Account</span>
+                <span class="q-iva-value">954322582</span>
+              </div>
+              <div class="q-iva-row" style="padding:8px 0">
+                <span class="q-iva-label">IBAN</span>
+                <span class="q-iva-value" style="font-size:11px;letter-spacing:.5px">CR97010200009543225824</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--light-gray);padding-top:28px">
+            <div class="q-block-label" style="margin-bottom:12px">US Dollars (USD)</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="q-iva-row" style="border-bottom:1px solid var(--off-white);padding:8px 0">
+                <span class="q-iva-label">Client</span>
+                <span class="q-iva-value">ERIC SEGURA LEDEZMA</span>
+              </div>
+              <div class="q-iva-row" style="border-bottom:1px solid var(--off-white);padding:8px 0">
+                <span class="q-iva-label">BAC Account</span>
+                <span class="q-iva-value">954321717</span>
+              </div>
+              <div class="q-iva-row" style="padding:8px 0">
+                <span class="q-iva-label">IBAN</span>
+                <span class="q-iva-value" style="font-size:11px;letter-spacing:.5px">CR98010200009543217173</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="closing-contact">
+          <div class="closing-info">TEAM@LÍMBICO.MEDIA</div>
+          <div class="closing-info">(+506) 86617198</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT CLIENT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title">Edit client</div>
+    <input type="hidden" id="editClientId"/>
+    <div class="field"><label>Name</label><input type="text" id="editClientName"/></div>
+    <div class="field"><label>Email</label><input type="text" id="editClientEmail" placeholder="Optional"/></div>
+    <div class="field"><label>Phone</label><input type="text" id="editClientPhone" placeholder="Optional"/></div>
+    <div class="field"><label>Notes</label><textarea id="editClientNotes" placeholder="Preferred session type, payment habits..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-modal-save" onclick="saveClientEdit()">Save</button>
+      <button class="btn-modal-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL='https://ukmkhilajucolujqygdx.supabase.co';
+const SB_KEY='sb_publishable_vA5HGJn-k2jF5SNV7BziQg_fbOUy0J1';
+const TABLE='trackerdata';
+
+async function sbGet(k){
+  const r=await fetch(`${SB_URL}/rest/v1/${TABLE}?clave=eq.${encodeURIComponent(k)}&select=valor`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  const rows=await r.json();return rows&&rows.length?JSON.parse(rows[0].valor):null;
+}
+async function sbSet(k,v){
+  const body=JSON.stringify({clave:k,valor:JSON.stringify(v)});
+  const r=await fetch(`${SB_URL}/rest/v1/${TABLE}?clave=eq.${encodeURIComponent(k)}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  const rows=await r.json();
+  if(rows&&rows.length){
+    await fetch(`${SB_URL}/rest/v1/${TABLE}?clave=eq.${encodeURIComponent(k)}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},body});
+  } else {
+    await fetch(`${SB_URL}/rest/v1/${TABLE}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body});
+  }
+}
+
+let quotes=[];
+let clients={}; // {id: {id, name, email, phone, notes, preferredSession, preferredCurrency}}
+let multiDates=[];
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+function fmtDate(d){if(!d)return '—';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
+function fmtDateShort(d){if(!d)return '—';return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function fmtTime(t){if(!t)return '';const[h,m]=t.split(':');const hr=parseInt(h);return `${hr>12?hr-12:hr||12}:${m} ${hr>=12?'PM':'AM'}`;}
+function fmtNum(n,cur){return cur+(Math.round(n)).toLocaleString('en-US');}
+
+// ── PANEL TABS ──
+function switchPanel(name,el){
+  document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel-view').forEach(v=>v.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='clients')renderClients();
+  if(name==='history')renderHistory();
+}
+
+// ── SESSION ──
+function onSessionChange(){
+  const val=document.getElementById('fSession').value;
+  document.getElementById('dateSingle').style.display='none';
+  document.getElementById('dateHourly').style.display='none';
+  document.getElementById('dateMulti').style.display='none';
+  if(val==='Hourly') document.getElementById('dateHourly').style.display='block';
+  else if(val==='Multi Day'){document.getElementById('dateMulti').style.display='block';if(!multiDates.length)addDate();}
+  else document.getElementById('dateSingle').style.display='block';
+}
+function onIvaChange(){if(document.getElementById('quoteDoc').style.display!=='none')generateQuote();}
+
+// ── MULTI DATE ──
+function addDate(){multiDates.push('');renderMultiDates();}
+function removeDate(i){multiDates.splice(i,1);renderMultiDates();}
+function updateDate(i,val){multiDates[i]=val;}
+function renderMultiDates(){
+  document.getElementById('multiDayList').innerHTML=multiDates.map((d,i)=>`
+    <div class="multiday-item">
+      <input type="date" value="${d}" onchange="updateDate(${i},this.value)"/>
+      ${multiDates.length>1?`<button class="btn-remove-date" onclick="removeDate(${i})">×</button>`:''}
+    </div>`).join('');
+}
+
+// ── AUTOCOMPLETE ──
+function onClientInput(){
+  const val=document.getElementById('fClient').value.trim().toLowerCase();
+  const list=document.getElementById('autocompleteList');
+  if(!val||val.length<1){list.style.display='none';return;}
+  const matches=Object.values(clients).filter(c=>c.name.toLowerCase().includes(val));
+  if(!matches.length){list.style.display='none';return;}
+  list.innerHTML=matches.slice(0,6).map(c=>{
+    const qCount=quotes.filter(q=>q.clientId===c.id).length;
+    return `<div class="autocomplete-item" onmousedown="selectClient('${c.id}')">
+      <strong>${c.name}</strong>
+      <span>${qCount} quote${qCount!==1?'s':''} · ${c.preferredSession||'Half Day'} · ${c.preferredCurrency||'₡'}</span>
+    </div>`;
+  }).join('');
+  list.style.display='block';
+}
+function hideAutocomplete(){setTimeout(()=>document.getElementById('autocompleteList').style.display='none',150);}
+function selectClient(id){
+  const c=clients[id];if(!c)return;
+  document.getElementById('fClient').value=c.name;
+  if(c.preferredSession) document.getElementById('fSession').value=c.preferredSession;
+  if(c.preferredCurrency) document.getElementById('fCurrency').value=c.preferredCurrency;
+  document.getElementById('autocompleteList').style.display='none';
+  onSessionChange();
+  toast(`${c.name} loaded`);
+}
+
+// ── GENERATE ──
+function generateQuote(){
+  const client=document.getElementById('fClient').value.trim();
+  const project=document.getElementById('fProject').value.trim();
+  const session=document.getElementById('fSession').value;
+  const amount=parseFloat(document.getElementById('fAmount').value)||0;
+  const currency=document.getElementById('fCurrency').value;
+  const objective=document.getElementById('fObjective').value.trim();
+  const hasIva=document.getElementById('fIva').checked;
+  if(!client){toast('Enter a client name');return;}
+  if(!amount){toast('Enter the investment amount');return;}
+
+  document.getElementById('qClient').textContent=client.toUpperCase();
+  const projLine=document.getElementById('qProjectLine');
+  if(project){projLine.textContent=project.toUpperCase();projLine.style.display='block';}
+  else projLine.style.display='none';
+
+  document.getElementById('qSession').textContent=session.toUpperCase();
+  const sub=document.getElementById('qSessionSub');
+  if(session==='Hourly') sub.textContent='Billed per agreed hours.';
+  else if(session==='Multi Day') sub.textContent='Multi-day availability as agreed.';
+  else sub.textContent='No hourly limitations.\nFull availability as agreed.';
+
+  const dateLabel=document.getElementById('qDateLabel');
+  const dateArea=document.getElementById('qDateArea');
+  if(session==='Hourly'){
+    const d=document.getElementById('fDateHourly').value;
+    const ts=document.getElementById('fTimeStart').value;const te=document.getElementById('fTimeEnd').value;
+    dateLabel.textContent='Date & Time';
+    dateArea.innerHTML=`<div class="q-block-value">${fmtDate(d)}</div><div class="q-block-sub" style="margin-top:6px">${ts&&te?fmtTime(ts)+' — '+fmtTime(te):'Time TBD'}</div>`;
+  } else if(session==='Multi Day'){
+    const filled=multiDates.filter(d=>d);
+    dateLabel.textContent=`Dates (${filled.length} day${filled.length!==1?'s':''})`;
+    dateArea.innerHTML=filled.length?`<div class="q-dates-list">${filled.map(d=>`<div class="q-date-item">${fmtDate(d)}</div>`).join('')}</div>`:`<div class="q-block-value">—</div>`;
+  } else {
+    const d=document.getElementById('fDate').value;
+    dateLabel.textContent='Date';
+    dateArea.innerHTML=`<div class="q-block-value">${fmtDate(d)}</div>`;
+  }
+
+  document.getElementById('qCurrency').textContent=currency;
+  if(hasIva){
+    const iva=Math.round(amount*0.13);const total=amount+iva;
+    document.getElementById('qAmount').textContent=Math.round(amount).toLocaleString('en-US');
+    document.getElementById('qIvaBase').textContent=fmtNum(amount,currency);
+    document.getElementById('qIvaAmt').textContent=fmtNum(iva,currency);
+    document.getElementById('qIvaTotal').textContent=fmtNum(total,currency);
+    document.getElementById('qIvaTable').style.display='block';
+  } else {
+    document.getElementById('qAmount').textContent=Math.round(amount).toLocaleString('en-US');
+    document.getElementById('qIvaTable').style.display='none';
+  }
+
+  const objBlock=document.getElementById('qObjectiveBlock');
+  if(objective){document.getElementById('qObjective').textContent=objective;objBlock.style.display='block';}
+  else objBlock.style.display='none';
+
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('quoteDoc').style.display='block';
+  document.getElementById('btnPdf').classList.add('visible');
+  document.getElementById('btnSave').classList.add('visible');
+}
+
+// ── SAVE QUOTE ──
+async function saveQuote(){
+  const clientName=document.getElementById('fClient').value.trim();
+  const project=document.getElementById('fProject').value.trim();
+  const session=document.getElementById('fSession').value;
+  const amount=parseFloat(document.getElementById('fAmount').value)||0;
+  const currency=document.getElementById('fCurrency').value;
+  const objective=document.getElementById('fObjective').value.trim();
+  const hasIva=document.getElementById('fIva').checked;
+  if(!clientName||!amount){toast('Generate a quote first');return;}
+
+  // Create or find client
+  let clientId=Object.values(clients).find(c=>c.name.toLowerCase()===clientName.toLowerCase())?.id;
+  if(!clientId){
+    clientId='c_'+Date.now();
+    clients[clientId]={id:clientId,name:clientName,email:'',phone:'',notes:'',preferredSession:session,preferredCurrency:currency,createdAt:new Date().toISOString()};
+  } else {
+    // Update preferences
+    clients[clientId].preferredSession=session;
+    clients[clientId].preferredCurrency=currency;
+  }
+
+  let dateInfo={};
+  if(session==='Hourly') dateInfo={date:document.getElementById('fDateHourly').value,timeStart:document.getElementById('fTimeStart').value,timeEnd:document.getElementById('fTimeEnd').value};
+  else if(session==='Multi Day') dateInfo={dates:multiDates.filter(d=>d)};
+  else dateInfo={date:document.getElementById('fDate').value};
+
+  const q={id:'q_'+Date.now(),clientId,clientName,project,session,amount,currency,objective,hasIva,...dateInfo,createdAt:new Date().toISOString()};
+  quotes.unshift(q);if(quotes.length>100)quotes=quotes.slice(0,100);
+
+  try{
+    await sbSet('quotes_eric',quotes);
+    await sbSet('clients_eric',clients);
+    toast('Saved ✓');
+  } catch(e){toast('Saved locally');}
+  renderHistory();
+}
+
+// ── HISTORY ──
+function renderHistory(){
+  const el=document.getElementById('historyList');
+  if(!quotes.length){el.innerHTML='<div class="history-empty">No quotes yet</div>';return;}
+  el.innerHTML=quotes.map((q,i)=>`
+    <div class="history-item" onclick="loadQuote(${i})">
+      <div>
+        <div class="hi-name">${q.clientName}${q.project?' — '+q.project:''}</div>
+        <div class="hi-meta">${q.session} · ${q.currency}${Math.round(q.amount).toLocaleString('en-US')}</div>
+      </div>
+      <div class="hi-right">
+        <div class="hi-date">${q.date?fmtDateShort(q.date):q.dates?q.dates.length+' days':''}</div>
+      </div>
+    </div>`).join('');
+}
+
+function loadQuote(i){
+  const q=quotes[i];
+  document.getElementById('fClient').value=q.clientName||'';
+  document.getElementById('fProject').value=q.project||'';
+  document.getElementById('fSession').value=q.session||'Half Day';
+  document.getElementById('fAmount').value=q.amount||'';
+  document.getElementById('fCurrency').value=q.currency||'₡';
+  document.getElementById('fObjective').value=q.objective||'';
+  document.getElementById('fIva').checked=!!q.hasIva;
+  onSessionChange();
+  if(q.session==='Hourly'){document.getElementById('fDateHourly').value=q.date||'';document.getElementById('fTimeStart').value=q.timeStart||'';document.getElementById('fTimeEnd').value=q.timeEnd||'';}
+  else if(q.session==='Multi Day'){multiDates=q.dates||[];renderMultiDates();}
+  else document.getElementById('fDate').value=q.date||'';
+  switchPanel('quote',document.querySelector('.panel-tab'));
+  document.querySelectorAll('.panel-tab')[0].click();
+  generateQuote();toast('Quote loaded');
+}
+
+// ── CLIENTS ──
+function renderClients(){
+  const el=document.getElementById('clientsList');
+  const search=(document.getElementById('clientSearch')?.value||'').toLowerCase();
+  const all=Object.values(clients).filter(c=>!search||c.name.toLowerCase().includes(search));
+  if(!all.length){el.innerHTML='<div class="clients-empty">No clients yet. Save a quote to add a client.</div>';return;}
+
+  el.innerHTML=all.map(c=>{
+    const cQuotes=quotes.filter(q=>q.clientId===c.id);
+    const total=cQuotes.reduce((a,q)=>a+q.amount,0);
+    const lastQ=cQuotes[0];
+    return `<div class="client-card">
+      <div class="client-card-name">${c.name}</div>
+      <div class="client-card-meta">
+        ${c.email?c.email+'<br>':''}
+        ${c.phone?c.phone+'<br>':''}
+        ${c.notes?'<em>'+c.notes+'</em><br>':''}
+        Prefers: ${c.preferredSession||'Half Day'} · ${c.preferredCurrency||'₡'}
+      </div>
+      <div class="client-card-stat">
+        <div class="client-stat"><div class="client-stat-val">${cQuotes.length}</div><div class="client-stat-lbl">Quotes</div></div>
+        <div class="client-stat"><div class="client-stat-val">${c.preferredCurrency||'₡'}${Math.round(total).toLocaleString('en-US')}</div><div class="client-stat-lbl">Total quoted</div></div>
+        <div class="client-stat"><div class="client-stat-val">${lastQ?fmtDateShort(lastQ.date||lastQ.dates?.[0]||''):'—'}</div><div class="client-stat-lbl">Last session</div></div>
+      </div>
+      ${cQuotes.length?`
+      <div style="margin-top:10px">
+        <button onclick="toggleClientQuotes('cq_${c.id}')" style="background:none;border:none;font-family:var(--font);font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--mid-gray);cursor:pointer;padding:0">
+          View quotes ↓
+        </button>
+        <div class="client-quotes" id="cq_${c.id}">
+          ${cQuotes.map(q=>`<div class="client-quote-item">
+            <span class="cqi-name">${q.project||q.session} · ${q.date?fmtDateShort(q.date):''}</span>
+            <span class="cqi-amt">${q.currency}${Math.round(q.amount).toLocaleString('en-US')}</span>
+          </div>`).join('')}
+        </div>
+      </div>`:''}
+      <div class="client-actions">
+        <button class="btn-client-action" onclick="newQuoteForClient('${c.id}')">New quote</button>
+        <button class="btn-client-action" onclick="openEditClient('${c.id}')">Edit</button>
+        <button class="btn-client-action danger" onclick="deleteClient('${c.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleClientQuotes(id){
+  const el=document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+function newQuoteForClient(id){
+  const c=clients[id];if(!c)return;
+  document.getElementById('fClient').value=c.name;
+  if(c.preferredSession) document.getElementById('fSession').value=c.preferredSession;
+  if(c.preferredCurrency) document.getElementById('fCurrency').value=c.preferredCurrency;
+  document.querySelectorAll('.panel-tab')[0].click();
+  onSessionChange();toast(`New quote for ${c.name}`);
+}
+
+function openEditClient(id){
+  const c=clients[id];if(!c)return;
+  document.getElementById('editClientId').value=id;
+  document.getElementById('editClientName').value=c.name||'';
+  document.getElementById('editClientEmail').value=c.email||'';
+  document.getElementById('editClientPhone').value=c.phone||'';
+  document.getElementById('editClientNotes').value=c.notes||'';
+  document.getElementById('editModal').classList.add('open');
+}
+function closeModal(){document.getElementById('editModal').classList.remove('open');}
+async function saveClientEdit(){
+  const id=document.getElementById('editClientId').value;
+  if(!clients[id])return;
+  clients[id].name=document.getElementById('editClientName').value.trim()||clients[id].name;
+  clients[id].email=document.getElementById('editClientEmail').value.trim();
+  clients[id].phone=document.getElementById('editClientPhone').value.trim();
+  clients[id].notes=document.getElementById('editClientNotes').value.trim();
+  try{await sbSet('clients_eric',clients);toast('Client updated ✓');}catch(e){toast('Updated locally');}
+  closeModal();renderClients();
+}
+async function deleteClient(id){
+  if(!confirm('Delete this client and all their quotes?'))return;
+  delete clients[id];
+  quotes=quotes.filter(q=>q.clientId!==id);
+  try{await sbSet('clients_eric',clients);await sbSet('quotes_eric',quotes);toast('Client deleted');}catch(e){}
+  renderClients();renderHistory();
+}
+
+// ── INIT ──
+function downloadPDF(){
+  const doc=document.getElementById('quoteDoc');
+  if(!doc||doc.style.display==='none'){toast('Generate a quote first');return;}
+
+  // Collect all styles from current page
+  const styles=Array.from(document.styleSheets).map(ss=>{
+    try{return Array.from(ss.cssRules).map(r=>r.cssText).join('\n');}
+    catch(e){return '';}
+  }).join('\n');
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    ${styles}
+    *{box-sizing:border-box}
+    body{background:#fff!important;padding:0!important;margin:0!important;width:100%}
+    .app,.form-panel,.preview-panel,.preview-label,.toast{display:none!important}
+    .quote-doc{display:block!important;box-shadow:none!important;width:100%!important;max-width:100%!important}
+    .page,.page-cover,.page-content,.page-closing{width:100%!important}
+    .page-cover{padding:48px 32px!important}
+    .page-content{padding:48px 32px!important}
+    .page-closing{padding:48px 32px!important}
+    .cover-line-v{left:32px!important}
+    .q-client{font-size:10vw!important}
+    .cover-name{font-size:13vw!important}
+    .q-cost{font-size:9vw!important}
+    .cover-side,.content-side{display:none!important}
+    @page{margin:0;size:auto}
+    @media print{
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .page{page-break-after:always}
+    }
+  </style>
+  </head><body>${doc.outerHTML}</body></html>`;
+
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const client=document.getElementById('fClient').value.trim()||'quote';
+  a.download='quote-'+client.toLowerCase().replace(/\s+/g,'-')+'.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Quote downloaded — open and print as PDF');
+}
+
+async function init(){
+  multiDates=[];
+  try{
+    const [savedQ,savedC]=await Promise.all([sbGet('quotes_eric'),sbGet('clients_eric')]);
+    if(savedQ&&Array.isArray(savedQ)) quotes=savedQ;
+    if(savedC&&typeof savedC==='object') clients=savedC;
+  } catch(e){}
+  renderHistory();onSessionChange();
+}
+init();
+</script>
+</body>
+</html>
